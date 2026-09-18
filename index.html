@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Earn Cash - Daily Spin & Win</title>
+  
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Monetag SDK Tag -->
+  <script src='//libtl.com/sdk.js' data-zone='11831479' data-sdk='show_11831479'></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+    body { background: #0f172a; color: #fff; padding: 15px; text-align: center; }
+    
+    .card { 
+      background: #1e293b; 
+      border-radius: 16px; 
+      padding: 20px; 
+      margin-bottom: 15px; 
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+    }
+    
+    .coins { font-size: 28px; font-weight: bold; color: #f59e0b; margin: 10px 0; }
+    .limit-text { color: #94a3b8; font-size: 14px; margin-bottom: 10px; }
+
+    .wheel-box {
+      position: relative;
+      width: 260px;
+      height: 260px;
+      margin: 20px auto;
+    }
+
+    .pointer {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 14px solid transparent;
+      border-right: 14px solid transparent;
+      border-top: 22px solid #ef4444;
+      z-index: 10;
+    }
+
+    #wheelCanvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 6px solid #6366f1;
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+      transition: transform 4s cubic-bezier(0.15, 0.8, 0.15, 1);
+    }
+
+    .btn { 
+      background: #4f46e5; 
+      color: white; 
+      border: none; 
+      padding: 14px 24px; 
+      border-radius: 12px; 
+      font-size: 18px; 
+      font-weight: bold; 
+      cursor: pointer; 
+      width: 100%; 
+      margin-top: 15px; 
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+
+    /* Custom Popup Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      color: #1e293b;
+      width: 85%;
+      max-width: 320px;
+      border-radius: 20px;
+      padding: 25px 20px;
+      position: relative;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 18px;
+      font-size: 20px;
+      color: #64748b;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .icon-circle {
+      width: 60px;
+      height: 60px;
+      background: #6366f1;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 15px auto;
+      font-weight: bold;
+    }
+
+    .modal-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #4f46e5;
+      margin-bottom: 8px;
+    }
+
+    .modal-msg {
+      font-size: 15px;
+      color: #475569;
+      margin-bottom: 20px;
+    }
+
+    .modal-ok-btn {
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+    }
+
+    /* FULLSCREEN OFFLINE / CONNECTION LOST SCREEN */
+    #offlineScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #ffffff;
+      color: #1e293b;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 99999;
+      padding: 25px;
+      text-align: center;
+    }
+
+    .offline-icon-circle {
+      width: 140px;
+      height: 140px;
+      background: #ede9fe;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    .offline-icon {
+      width: 70px;
+      height: 70px;
+      background: #4f46e5;
+      mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4c-1.48 0-2.85.43-4.01 1.17l1.46 1.46C10.21 6.23 11.08 6 12 6c3.04 0 5.5 2.46 5.5 5.5v.5h1.5c1.66 0 3 1.34 3 3 0 .66-.22 1.26-.59 1.75l1.45 1.45c.71-.88 1.14-1.99 1.14-3.2 0-2.72-2.06-4.96-4.65-5.21zM3 5.27l2.75 2.74C3.89 9.17 2.5 11.23 2.5 13.5 2.5 16.54 4.96 19 8 19h10.73l2 2 1.27-1.27L4.27 4 3 5.27zM7.73 17c-1.93 0-3.5-1.57-3.5-3.5 0-1.56 1.03-2.88 2.45-3.33l4.38 4.38H7.73z"/></svg>') no-repeat center / contain;
+      -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4c-1.48 0-2.85.43-4.01 1.17l1.46 1.46C10.21 6.23 11.08 6 12 6c3.04 0 5.5 2.46 5.5 5.5v.5h1.5c1.66 0 3 1.34 3 3 0 .66-.22 1.26-.59 1.75l1.45 1.45c.71-.88 1.14-1.99 1.14-3.2 0-2.72-2.06-4.96-4.65-5.21zM3 5.27l2.75 2.74C3.89 9.17 2.5 11.23 2.5 13.5 2.5 16.54 4.96 19 8 19h10.73l2 2 1.27-1.27L4.27 4 3 5.27zM7.73 17c-1.93 0-3.5-1.57-3.5-3.5 0-1.56 1.03-2.88 2.45-3.33l4.38 4.38H7.73z"/></svg>') no-repeat center / contain;
+    }
+
+    .offline-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 12px;
+    }
+
+    .offline-desc {
+      font-size: 15px;
+      color: #64748b;
+      line-height: 1.5;
+      max-width: 280px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Connection Lost Fullscreen Overlay -->
+  <div id="offlineScreen">
+    <div class="offline-icon-circle">
+      <div class="offline-icon"></div>
+    </div>
+    <div class="offline-title">Connection Lost</div>
+    <div class="offline-desc">
+      It seems you are offline.<br>
+      Please check your internet connection to continue using the app.
+    </div>
+  </div>
+
+  <!-- Balance Section -->
+  <div class="card">
+    <h3>Total Balance</h3>
+    <div class="coins">🪙 <span id="userCoins">0</span> Coins</div>
+  </div>
+
+  <!-- Spin Wheel Section -->
+  <div class="card">
+    <h2>🌀 Daily Spin & Win</h2>
+    <p class="limit-text">Remaining Spins Today: <strong id="spinLimit" style="color: #38bdf8;">25</strong>/25</p>
+
+    <div class="wheel-box">
+      <div class="pointer"></div>
+      <canvas id="wheelCanvas" width="300" height="300"></canvas>
+    </div>
+
+    <button class="btn" id="spinBtn" onclick="watchAdAndSpin()">
+      ▶ WATCH AD & SPIN
+    </button>
+  </div>
+
+  <!-- Custom Popup Modal -->
+  <div class="modal-overlay" id="rewardModal">
+    <div class="modal-card">
+      <span class="close-btn" onclick="closeModal()">&times;</span>
+      <div class="icon-circle">i</div>
+      <div class="modal-title">🎉 Winner!</div>
+      <div class="modal-msg" id="modalText">You won 10 coins.</div>
+      <button class="modal-ok-btn" onclick="closeModal()">OK</button>
+    </div>
+  </div>
+
+  <script>
+    const MAX_DAILY_SPINS = 25;
+    const COOLDOWN_SECONDS = 25;
+    const TODAY_DATE = new Date().toISOString().slice(0, 10);
+
+    const rewards = [
+      { label: "10 Coins", value: 10, color: "#ef4444" },
+      { label: "50 Coins", value: 50, color: "#f59e0b" },
+      { label: "20 Coins", value: 20, color: "#8b5cf6" },
+      { label: "JACKPOT!", value: 100, color: "#ec4899" },
+      { label: "5 Coins", value: 5, color: "#3b82f6" },
+      { label: "15 Coins", value: 15, color: "#10b981" }
+    ];
+
+    let coins = parseInt(localStorage.getItem('coins')) || 0;
+    let lastSpinDate = localStorage.getItem('lastSpinDate') || TODAY_DATE;
+    let spinsDone = parseInt(localStorage.getItem('spinsDone')) || 0;
+    let currentRotation = 0;
+    let timerInterval = null;
+
+    if (lastSpinDate !== TODAY_DATE) {
+      spinsDone = 0;
+      localStorage.setItem('spinsDone', 0);
+      localStorage.setItem('lastSpinDate', TODAY_DATE);
+    }
+
+    // Network Status Checker
+    function checkConnection() {
+      const offlineScreen = document.getElementById('offlineScreen');
+      if (!navigator.onLine) {
+        offlineScreen.style.display = 'flex';
+      } else {
+        offlineScreen.style.display = 'none';
+      }
+    }
+
+    window.addEventListener('online', checkConnection);
+    window.addEventListener('offline', checkConnection);
+
+    function drawWheel() {
+      const canvas = document.getElementById('wheelCanvas');
+      const ctx = canvas.getContext('2d');
+      const numSlices = rewards.length;
+      const sliceAngle = (2 * Math.PI) / numSlices;
+
+      for (let i = 0; i < numSlices; i++) {
+        const angle = i * sliceAngle - (Math.PI / 2) - (sliceAngle / 2);
+        
+        ctx.beginPath();
+        ctx.fillStyle = rewards[i].color;
+        ctx.moveTo(150, 150);
+        ctx.arc(150, 150, 150, angle, angle + sliceAngle);
+        ctx.lineTo(150, 150);
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(150, 150);
+        ctx.rotate(angle + sliceAngle / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 16px sans-serif";
+        ctx.fillText(rewards[i].label, 135, 6);
+        ctx.restore();
+      }
+
+      ctx.beginPath();
+      ctx.arc(150, 150, 25, 0, 2 * Math.PI);
+      ctx.fillStyle = "#0f172a";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+    }
+
+    function updateUI() {
+      document.getElementById('userCoins').innerText = coins;
+      let spinsLeft = MAX_DAILY_SPINS - spinsDone;
+      document.getElementById('spinLimit').innerText = spinsLeft;
+
+      if (spinsLeft <= 0) {
+        let btn = document.getElementById('spinBtn');
+        btn.disabled = true;
+        btn.innerHTML = "Daily Limit Reached!";
+      }
+    }
+
+    function watchAdAndSpin() {
+      if (!navigator.onLine) {
+        checkConnection();
+        return;
+      }
+
+      if (spinsDone >= MAX_DAILY_SPINS) {
+        showCustomModal("Limit Reached!", "❌ Aaj ki daily spin limit poori ho gayi hai.");
+        return;
+      }
+
+      if (typeof show_11831479 === 'function') {
+        show_11831479().then(() => {
+          playSpin();
+        }).catch(e => {
+          showCustomModal("Ad Failed!", "❌ Ad load nahi ho paya. Internet connection check karein.");
+        });
+      } else {
+        showCustomModal("Ad Error!", "❌ Ad SDK load nahi hua. Page refresh karein.");
+      }
+    }
+
+    function playSpin() {
+      let btn = document.getElementById('spinBtn');
+      btn.disabled = true;
+      btn.innerHTML = "Spinning...";
+
+      const targetIndex = 0;
+      const numSlices = rewards.length;
+      const sliceDegree = 360 / numSlices;
+
+      const targetDegree = 360 - (targetIndex * sliceDegree);
+      const fullRounds = 360 * 5; 
+      
+      currentRotation += fullRounds + (targetDegree - (currentRotation % 360));
+
+      const canvas = document.getElementById('wheelCanvas');
+      canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+      setTimeout(() => {
+        let winAmount = rewards[targetIndex].value;
+        coins += winAmount;
+        spinsDone += 1;
+
+        localStorage.setItem('coins', coins);
+        localStorage.setItem('spinsDone', spinsDone);
+        localStorage.setItem('lastSpinDate', TODAY_DATE);
+
+        updateUI();
+        showCustomModal("🎉 Winner!", `You won ${winAmount} coins.`);
+
+        if ((MAX_DAILY_SPINS - spinsDone) > 0) {
+          startCooldownTimer();
+        }
+      }, 4000);
+    }
+
+    function startCooldownTimer() {
+      let btn = document.getElementById('spinBtn');
+      let timeLeft = COOLDOWN_SECONDS;
+      btn.disabled = true;
+      btn.innerHTML = `▶ WAIT ${timeLeft}s`;
+
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft > 0) {
+          btn.innerHTML = `▶ WAIT ${timeLeft}s`;
+        } else {
+          clearInterval(timerInterval);
+          btn.disabled = false;
+          btn.innerHTML = "▶ WATCH AD & SPIN";
+        }
+      }, 1000);
+    }
+
+    function showCustomModal(title, msg) {
+      document.querySelector('.modal-title').innerText = title;
+      document.getElementById('modalText').innerText = msg;
+      document.getElementById('rewardModal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('rewardModal').classList.remove('active');
+    }
+
+    checkConnection();
+    drawWheel();
+    updateUI();
+  </script>
+</body>
+    </html>
+    
