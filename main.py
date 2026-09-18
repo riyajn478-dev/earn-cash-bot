@@ -2,7 +2,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppI
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 BOT_TOKEN = "8472292124:AAE2YWPA1mLeWGySi4lxy5WJYuZqBUSL4mE"
-WEB_APP_URL = "https://your-mini-app-url.com"
+WEB_APP_URL = "https://riyajn478-dev.github.io/earn-cash-bot/"
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     web_app = WebAppInfo(url=WEB_APP_URL)
