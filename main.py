@@ -1,58 +1,39 @@
 import os
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+import threading
+from flask import Flask
+from telegram.ext import Application, CommandHandler
 
-TOKEN = os.getenv("BOT_TOKEN")
-WEB_APP_URL = "https://riyajn478-dev.github.io/earn-cash-bot/"
+# Dummy Web Server (Render ke port error ko fix karne ke liye)
+app = Flask(__name__)
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        ['📅 Daily Check-in', '🌀 Spin & Win'],
-        ['🧮 Math Quiz', '🧩 Captcha Task'],
-        ['📺 Watch Ads', '💰 Withdraw']
-    ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text(
-        "✨ Welcome to Earn Cash Bot!\n\nSelect an option below to start earning:",
-        reply_markup=reply_markup
-    )
+@app.route('/')
+def home():
+    return "Bot is Alive!"
 
-async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.strip()
+def run_web():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
 
-    if 'Daily Check-in' in text:
-        await update.message.reply_text("✅ **Daily Check-in Successful!**\n\nAapko +10 Coins mil gaye hain!")
+# Web server ko background thread mein start karna
+threading.Thread(target=run_web, daemon=True).start()
 
-    elif 'Spin & Win' in text:
-        inline_keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🌀 Open Spin & Win App", web_app=WebAppInfo(url=WEB_APP_URL))]
-        ])
-        await update.message.reply_text("Below button par click karke Spin Wheel kholo:", reply_markup=inline_keyboard)
-
-    elif 'Math Quiz' in text:
-        await update.message.reply_text("🧮 **Math Quiz Task**\n\nSolve: **15 + 25 = ?**")
-
-    elif 'Captcha Task' in text:
-        await update.message.reply_text("🧩 **Captcha Task**\n\nType this code: **`EARN2026`**")
-
-    elif 'Watch Ads' in text:
-        await update.message.reply_text("📺 **Watch Ads**\n\nFeature coming soon!")
-
-    elif 'Withdraw' in text:
-        await update.message.reply_text("💰 **Withdraw**\n\nMinimum withdrawal: **1000 Coins**.")
+# Telegram Bot Functions
+async def start(update, context):
+    await update.message.reply_text("Hello! Welcome to Earn Cash Bot. Bot is fully online!")
 
 def main():
-    if not TOKEN:
-        print("Error: BOT_TOKEN Environment Variable set nahi hai!")
+    token = os.environ.get("BOT_TOKEN")
+    if not token:
+        print("BOT_TOKEN missing!")
         return
 
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
-
-    print("Bot starting...")
-    app.run_polling()
+    application = Application.builder().token(token).build()
+    application.add_handler(CommandHandler("start", start))
+    
+    print("Bot is starting...")
+    application.run_polling()
 
 if __name__ == '__main__':
     main()
+    
         
